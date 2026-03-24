@@ -1,0 +1,475 @@
+:root {
+  --bg-0: #f2f6fa;
+  --bg-1: #dce6f0;
+  --panel: #ffffff;
+  --ink: #1b2533;
+  --muted: #5f6f84;
+  --accent: #0f6cbd;
+  --accent-2: #0a4f8a;
+  --danger: #b42318;
+  --border: rgba(27, 37, 51, 0.12);
+  --radius: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at 12% 8%, #ffffff 0%, var(--bg-0) 40%, var(--bg-1) 100%);
+  min-height: 100vh;
+}
+
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(15, 108, 189, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 108, 189, 0.06) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+.dashboard-root {
+  position: relative;
+  z-index: 1;
+  padding: 20px;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: clamp(22px, 2.4vw, 32px);
+}
+
+.dashboard-header p {
+  margin: 6px 0 18px;
+  color: var(--muted);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-auto-rows: auto;
+  gap: 14px;
+  grid-auto-flow: dense;
+}
+
+.widget {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(27, 37, 51, 0.08);
+  overflow: auto;
+  transition: box-shadow 140ms ease, transform 140ms ease, cursor 140ms ease, opacity 140ms ease, background-color 140ms ease;
+  min-width: 360px;
+  min-height: 250px;
+  cursor: grab;
+  position: relative;
+}
+
+.widget:active {
+  cursor: grabbing;
+}
+
+.widget:hover {
+  box-shadow: 0 14px 36px rgba(27, 37, 51, 0.12);
+}
+
+.widget.dragging {
+  opacity: 0.4;
+  transform: scale(0.98);
+}
+
+.widget.drop-target {
+  outline: 3px solid var(--accent);
+  outline-offset: -6px;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.widget.drop-target.drop-left {
+  border-left: 5px solid var(--accent);
+}
+
+.widget.drop-target.drop-right {
+  border-right: 5px solid var(--accent);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(15, 108, 189, 0.08), transparent);
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.widget-handle {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.6) 0%, rgba(59, 130, 246, 0.4) 100%);
+  cursor: grab;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.widget-handle:active {
+  cursor: grabbing;
+}
+
+.widget-handle h2 {
+  font-size: 16px;
+}
+
+.grab {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.widget-body {
+  padding: 14px;
+}
+
+.stream-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #0b1220;
+}
+
+#stream {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 320px;
+  object-fit: cover;
+}
+
+.camera-notice {
+  border: 1px solid #f0b429;
+  background: #fff7e6;
+  color: #7a3e00;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.camera-notice h3 {
+  margin: 0 0 6px;
+}
+
+.camera-notice p {
+  margin: 0;
+}
+
+.hidden {
+  display: none;
+}
+
+.hint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.button-grid,
+.stage-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button.secondary {
+  background: linear-gradient(180deg, #475870, #314155);
+}
+
+button.danger {
+  background: linear-gradient(180deg, #d92d20, var(--danger));
+}
+
+button.success {
+  background: linear-gradient(180deg, #16a34a, #15803d);
+}
+
+.sliders {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #2d3b4f;
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
+.status-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0;
+}
+
+pre {
+  margin: 0;
+  background: #101a2b;
+  color: #d3def1;
+  border-radius: 10px;
+  border: 1px solid rgba(211, 222, 241, 0.18);
+  padding: 12px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.axis-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.axis-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: #f9fbfd;
+}
+
+.axis-row h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.axis-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 1200px) {
+  .widget[data-widget="camera-feed"],
+  .widget[data-widget="camera-controls"],
+  .widget[data-widget="stage-controls"] {
+    grid-column: span 12;
+  }
+
+  .axis-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Thermal Control Styles */
+.thermal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(249, 115, 22, 0.08));
+  border-radius: 8px;
+}
+
+.thermal-display {
+  display: flex;
+  gap: 20px;
+}
+
+.temp-current,
+.temp-target {
+  text-align: center;
+  min-width: 80px;
+}
+
+.temp-label {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.temp-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.thermal-controls-top {
+  flex-shrink: 0;
+}
+
+.thermal-graph-container {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f9fbfd;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  min-height: 180px;
+}
+
+.thermal-graph {
+  width: 100%;
+  height: 160px;
+}
+
+.thermal-input-section {
+  margin-bottom: 16px;
+}
+
+.thermal-input-section label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.thermal-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.thermal-input-group input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.thermal-input-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.thermal-input-group button {
+  padding: 8px 16px;
+  flex-shrink: 0;
+}
+
+.thermal-presets {
+  margin-bottom: 16px;
+}
+
+.preset-label {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px;
+}
+
+.preset-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.preset-buttons button {
+  padding: 8px;
+  font-size: 13px;
+}
+
+#thermal_status {
+  font-size: 12px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+/* Vacuum Control Styles */
+.vacuum-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(14, 165, 233, 0.08));
+  border-radius: 8px;
+}
+
+.vacuum-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ef4444;
+  transition: background-color 300ms ease;
+}
+
+.status-indicator.active {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.status-text {
+  min-width: 80px;
+}
+
+.status-label {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.status-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.vacuum-control {
+  flex-shrink: 0;
+}
+
+.vacuum-control button {
+  transition: transform 120ms ease;
+}
+
+#vacuum_status {
+  font-size: 12px;
+  max-height: 150px;
+  overflow-y: auto;
+}
