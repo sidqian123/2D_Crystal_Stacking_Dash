@@ -1,5 +1,6 @@
 let draggingWidget = null;
 let currDragDropZone = null;
+const WIDGET_SIZE_KEY = "dashboard_widget_sizes";
 
 async function callApi(path) {
   const response = await fetch(path);
@@ -150,6 +151,130 @@ function restoreLayoutState() {
   } catch (e) {
     console.error("Failed to restore layout:", e);
   }
+}
+
+function saveWidgetSizes() {
+  const dashboard = document.getElementById("dashboard");
+  if (!dashboard) return;
+
+  const sizes = {};
+  Array.from(dashboard.querySelectorAll(".widget")).forEach((widget) => {
+    const id = widget.getAttribute("data-widget");
+    if (!id) return;
+
+    const span = widget.style.gridColumn.replace("span", "").trim();
+    const height = widget.style.height.replace("px", "").trim();
+
+    if (span || height) {
+      sizes[id] = {};
+      if (span) sizes[id].span = Number(span);
+      if (height) sizes[id].height = Number(height);
+    }
+  });
+
+  localStorage.setItem(WIDGET_SIZE_KEY, JSON.stringify(sizes));
+}
+
+function restoreWidgetSizes() {
+  const dashboard = document.getElementById("dashboard");
+  if (!dashboard) return;
+
+  const saved = localStorage.getItem(WIDGET_SIZE_KEY);
+  if (!saved) return;
+
+  try {
+    const sizes = JSON.parse(saved);
+    Array.from(dashboard.querySelectorAll(".widget")).forEach((widget) => {
+      const id = widget.getAttribute("data-widget");
+      if (!id || !sizes[id]) return;
+
+      const { span, height } = sizes[id];
+      if (typeof span === "number" && Number.isFinite(span)) {
+        widget.style.gridColumn = `span ${Math.max(1, Math.round(span))}`;
+      }
+      if (typeof height === "number" && Number.isFinite(height)) {
+        widget.style.height = `${Math.max(250, Math.round(height))}px`;
+      }
+    });
+  } catch (e) {
+    console.error("Failed to restore widget sizes:", e);
+  }
+}
+
+function initWidgetResize() {
+  const dashboard = document.getElementById("dashboard");
+  if (!dashboard) return;
+
+  const widgets = Array.from(dashboard.querySelectorAll(".widget"));
+
+  widgets.forEach((widget) => {
+    if (widget.querySelector(".widget-resize-handle")) return;
+
+    const handle = document.createElement("div");
+    handle.className = "widget-resize-handle";
+    handle.title = "Resize card";
+    widget.appendChild(handle);
+
+    let resizing = false;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
+
+    handle.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      resizing = true;
+      startX = event.clientX;
+      startY = event.clientY;
+
+      const rect = widget.getBoundingClientRect();
+      startWidth = rect.width;
+      startHeight = rect.height;
+
+      widget.classList.add("resizing");
+      document.body.classList.add("resizing-dashboard");
+      widget.draggable = false;
+      handle.setPointerCapture(event.pointerId);
+    });
+
+    handle.addEventListener("pointermove", (event) => {
+      if (!resizing) return;
+
+      const width = Math.max(360, startWidth + (event.clientX - startX));
+      const height = Math.max(250, startHeight + (event.clientY - startY));
+
+      const styles = window.getComputedStyle(dashboard);
+      const columns = styles.gridTemplateColumns.split(" ").filter(Boolean).length || 1;
+      const gap = parseFloat(styles.columnGap || "0") || 0;
+      const usableWidth = dashboard.clientWidth - Math.max(0, columns - 1) * gap;
+      const colWidth = usableWidth / columns;
+      const span = Math.max(1, Math.min(columns, Math.round((width + gap) / (colWidth + gap))));
+
+      widget.style.gridColumn = `span ${span}`;
+      widget.style.height = `${Math.round(height)}px`;
+    });
+
+    const finishResize = (event) => {
+      if (!resizing) return;
+      resizing = false;
+      widget.classList.remove("resizing");
+      document.body.classList.remove("resizing-dashboard");
+      widget.draggable = true;
+      if (event && typeof event.pointerId === "number") {
+        try {
+          handle.releasePointerCapture(event.pointerId);
+        } catch (_err) {
+          // Ignore capture release errors from interrupted pointer sequences.
+        }
+      }
+      saveWidgetSizes();
+    };
+
+    handle.addEventListener("pointerup", finishResize);
+    handle.addEventListener("pointercancel", finishResize);
+  });
 }
 
 function updateLabel(id, decimals) {
@@ -547,6 +672,8 @@ async function toggleVacuumPower() {
 
 initDashboardDrag();
 restoreLayoutState();
+initWidgetResize();
+restoreWidgetSizes();
 initThermalGraph();
 loadStatus();
 loadNanopositionerStatus();
