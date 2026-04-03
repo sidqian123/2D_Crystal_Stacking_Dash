@@ -1,3 +1,4 @@
 fastapi>=0.115.0
 uvicorn>=0.30.0
 picamera2; platform_system == "Linux"
+git+https://github.com/HonakerM/MicroManipulatorStepper/#subdirectory=software/PythonAPI

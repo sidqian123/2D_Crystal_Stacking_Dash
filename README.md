@@ -62,6 +62,10 @@ All controllable devices inherit from `BaseDevice`, providing:
   - `fine_step: float` - Fine movement step size
   - `coarse_step: float` - Coarse movement step size
 - Methods:
+  - `connect(port: str, baud_rate: int = 921600)` - Connect to `OpenMicroStageInterface`
+  - `disconnect()` - Close the hardware connection
+  - `read_firmware_version() -> tuple[int, int, int]`
+  - `read_device_state_info()` - Read raw controller state when connected
   - `set_position(axis: str, value: float)` - Set axis position
   - `move(axis, direction, step_mode) → Dict` - Move in direction
   - `home() → Dict` - Return to origin
@@ -77,6 +81,7 @@ All controllable devices inherit from `BaseDevice`, providing:
   - `target_temp: float` - Target temperature (°C)
   - `temperature_history: List[float]` - Last 60 readings
 - Methods:
+  - `set_temperature(temperature: float)` - Compatibility wrapper for the stage API
   - `set_target_temp(target: float)` - Set target (0-100°C)
   - `get_target_temp() → float`
   - `add_reading(temp: float)` - Add temperature to history
@@ -88,6 +93,7 @@ All controllable devices inherit from `BaseDevice`, providing:
 - Inherits from: `BaseDevice`
 - Manages: Vacuum pump on/off control
 - Methods:
+  - `set_vacuum(vacuum_on: bool)` - Compatibility wrapper for the stage API
   - `get_device_status()` → Returns power state
 
 ## API Endpoints
@@ -120,6 +126,10 @@ All controllable devices inherit from `BaseDevice`, providing:
 | Method | Endpoint | Request Body | Description |
 |--------|----------|--------------|-------------|
 | GET | `/status` | — | Get current position and status |
+| POST | `/connect` | `{port, baud_rate}` | Connect stage controller |
+| POST | `/disconnect` | — | Disconnect stage controller |
+| GET | `/firmware-version` | — | Read controller firmware version |
+| GET | `/state-info` | — | Read raw controller state |
 | POST | `/move` | `{axis, direction, step_mode}` | Move stage |
 | POST | `/home` | — | Return to home (0,0,0) |
 | POST | `/stop` | — | Stop movement |

@@ -1,7 +1,9 @@
 """Thermal Plate Device - temperature control and monitoring."""
 
 from typing import Any, Dict, List
+
 from devices.base_device import BaseDevice
+from devices.oms_channel import oms_channel
 
 
 class ThermalPlateDevice(BaseDevice):
@@ -19,6 +21,14 @@ class ThermalPlateDevice(BaseDevice):
         with self.lock:
             self.target_temp = max(0, min(100, target))  # Clamp 0-100°C
             self.status_message = f"Target temperature set to {self.target_temp}°C"
+
+    def set_temperature(self, temperature: float) -> None:
+        """Compatibility wrapper for OpenMicroStageInterface-style temperature control."""
+        self.set_target_temp(temperature)
+        interface = oms_channel.get_interface()
+        if interface is not None:
+            interface.set_temperature(float(self.target_temp))
+            self.status_message = f"Temperature set via shared channel to {self.target_temp}°C"
     
     def get_target_temp(self) -> float:
         """Get target temperature."""
@@ -51,6 +61,7 @@ class ThermalPlateDevice(BaseDevice):
                 "name": self.name,
                 "is_on": self.is_on,
                 "status": self.status_message,
+                "connected": oms_channel.is_connected(),
                 "current_temperature": self.current_temp,
                 "target_temperature": self.target_temp,
                 "temperature_history": self.temperature_history.copy(),

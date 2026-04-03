@@ -25,8 +25,8 @@ async def get_vacuum_status():
     status = vacuum_device.get_device_status()
     return {
         "ok": True,
-        "implemented": False,
-        "message": "Hardware driver not implemented yet",
+        "implemented": True,
+        "message": "Vacuum device available via shared hardware channel",
         **status,
     }
 
@@ -34,10 +34,10 @@ async def get_vacuum_status():
 @router.post("/power")
 async def control_power(request: PowerControlRequest):
     """Turn vacuum pump on or off."""
-    vacuum_device.set_power(request.enabled)
+    vacuum_device.set_vacuum(request.enabled)
     return {
         "ok": True,
-        "implemented": False,
-        "message": "Hardware driver not implemented yet",
+        "implemented": True,
+        "message": "Vacuum power updated",
         "is_on": vacuum_device.get_power(),
     }

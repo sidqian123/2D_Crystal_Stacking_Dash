@@ -30,8 +30,8 @@ async def get_thermal_status():
     status = thermal_device.get_device_status()
     return {
         "ok": True,
-        "implemented": False,
-        "message": "Hardware driver not implemented yet",
+        "implemented": True,
+        "message": "Thermal device available via shared hardware channel",
         **status,
     }
 
@@ -39,11 +39,11 @@ async def get_thermal_status():
 @router.post("/set-temperature")
 async def set_temperature(request: SetTemperatureRequest):
     """Set target temperature for the thermal plate."""
-    thermal_device.set_target_temp(request.target_temperature)
+    thermal_device.set_temperature(request.target_temperature)
     return {
         "ok": True,
-        "implemented": False,
-        "message": "Hardware driver not implemented yet",
+        "implemented": True,
+        "message": "Temperature target updated",
         "target_temperature": thermal_device.get_target_temp(),
     }
 
@@ -54,8 +54,8 @@ async def control_power(request: PowerControlRequest):
     thermal_device.set_power(request.enabled)
     return {
         "ok": True,
-        "implemented": False,
-        "message": "Hardware driver not implemented yet",
+        "implemented": True,
+        "message": "Thermal plate power updated",
         "is_on": thermal_device.get_power(),
     }
 
