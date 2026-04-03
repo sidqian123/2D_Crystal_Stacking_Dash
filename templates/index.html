@@ -74,11 +74,6 @@
             <input id="flicker" type="range" min="0" max="1" step="1" value="1" oninput="updateFlickerLabel()" onchange="pushFlicker()">
           </section>
 
-          <div class="status-head">
-            <h3>Status</h3>
-            <button class="secondary" onclick="loadStatus()">Refresh</button>
-          </div>
-          <pre id="status">Loading...</pre>
         </div>
       </article>
 
@@ -125,8 +120,6 @@
             </div>
           </div>
 
-          <h3>Stage Status</h3>
-          <pre id="stage_status">Loading...</pre>
         </div>
       </article>
 
@@ -175,8 +168,6 @@
             </div>
           </div>
 
-          <h3>Thermal Status</h3>
-          <pre id="thermal_status">Loading...</pre>
         </div>
       </article>
 
@@ -200,8 +191,91 @@
             </div>
           </div>
 
-          <h3>Vacuum Status</h3>
-          <pre id="vacuum_status">Loading...</pre>
+        </div>
+      </article>
+
+      <article class="widget panel" draggable="true" data-widget="command-logs">
+        <header class="panel-header widget-handle compact">
+          <h2>Status + Command Logs</h2>
+          <span class="grab">Drag</span>
+        </header>
+        <div class="widget-body">
+          <div class="status-head">
+            <h3>Camera Status</h3>
+            <div class="status-actions">
+              <button class="secondary" onclick="loadStatus()">Refresh</button>
+              <button
+                class="secondary status-toggle"
+                data-status-key="camera_status"
+                data-target-id="status"
+                type="button"
+              >Collapse</button>
+            </div>
+          </div>
+          <div class="status-box" data-status-key="camera_status">
+            <pre id="status">Loading...</pre>
+          </div>
+
+          <div class="status-head">
+            <h3>Stage Status</h3>
+            <div class="status-actions">
+              <button
+                class="secondary status-toggle"
+                data-status-key="stage_status"
+                data-target-id="stage_status"
+                type="button"
+              >Collapse</button>
+            </div>
+          </div>
+          <div class="status-box" data-status-key="stage_status">
+            <pre id="stage_status">Loading...</pre>
+          </div>
+
+          <div class="status-head">
+            <h3>Thermal Status</h3>
+            <div class="status-actions">
+              <button
+                class="secondary status-toggle"
+                data-status-key="thermal_status"
+                data-target-id="thermal_status"
+                type="button"
+              >Collapse</button>
+            </div>
+          </div>
+          <div class="status-box" data-status-key="thermal_status">
+            <pre id="thermal_status">Loading...</pre>
+          </div>
+
+          <div class="status-head">
+            <h3>Vacuum Status</h3>
+            <div class="status-actions">
+              <button
+                class="secondary status-toggle"
+                data-status-key="vacuum_status"
+                data-target-id="vacuum_status"
+                type="button"
+              >Collapse</button>
+            </div>
+          </div>
+          <div class="status-box" data-status-key="vacuum_status">
+            <pre id="vacuum_status">Loading...</pre>
+          </div>
+
+          <div class="status-head">
+            <h3>Recent Commands</h3>
+            <div class="status-actions">
+              <button class="secondary" type="button" onclick="clearCommandLog()">Clear</button>
+              <button
+                class="secondary status-toggle"
+                data-status-key="command_log"
+                data-target-id="command_log"
+                type="button"
+              >Collapse</button>
+            </div>
+          </div>
+          <div class="status-box" data-status-key="command_log">
+            <pre id="command_log">No commands yet.</pre>
+          </div>
         </div>
       </article>
     </section>

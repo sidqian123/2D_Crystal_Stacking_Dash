@@ -24,14 +24,27 @@ class VacuumDevice(BaseDevice):
         if interface is not None:
             interface.set_vacuum(bool(vacuum_on))
             self.status_message = f"Vacuum set via shared channel: {'ON' if vacuum_on else 'OFF'}"
+
+    def get_vacuum(self) -> bool:
+        """Read vacuum state from hardware API or fallback to cached value."""
+        interface = oms_channel.get_interface()
+        if interface is not None:
+            try:
+                value = bool(interface.get_vacuum())
+                self.is_on = value
+                return value
+            except Exception:
+                return self.is_on
+        return self.is_on
     
     def get_device_status(self) -> Dict[str, Any]:
         """Get complete vacuum pump status."""
+        is_on = self.get_vacuum()
         with self.lock:
             return {
                 "device_type": self.get_device_type(),
                 "name": self.name,
-                "is_on": self.is_on,
+                "is_on": is_on,
                 "status": self.status_message,
                 "connected": oms_channel.is_connected(),
             }

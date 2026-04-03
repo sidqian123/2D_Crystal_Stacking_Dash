@@ -262,6 +262,27 @@ input[type="range"] {
   margin: 8px 0;
 }
 
+.status-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.status-box {
+  transition: max-height 180ms ease, opacity 180ms ease;
+  max-height: 280px;
+  opacity: 1;
+}
+
+.status-box.collapsed {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.status-toggle {
+  min-width: 90px;
+}
+
 pre {
   margin: 0;
   background: #101a2b;
@@ -274,6 +295,11 @@ pre {
   max-height: 220px;
   overflow: auto;
   white-space: pre-wrap;
+}
+
+#command_log {
+  max-height: 320px;
+  font-size: 11px;
 }
 
 .axis-grid {
@@ -495,4 +521,11 @@ pre {
   font-size: 12px;
   max-height: 150px;
   overflow-y: auto;
+}
+
+@media (max-width: 780px) {
+  .status-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
 }

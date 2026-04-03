@@ -29,6 +29,18 @@ class ThermalPlateDevice(BaseDevice):
         if interface is not None:
             interface.set_temperature(float(self.target_temp))
             self.status_message = f"Temperature set via shared channel to {self.target_temp}°C"
+
+    def get_temperature(self) -> float:
+        """Read current temperature from hardware API or fallback to cached value."""
+        interface = oms_channel.get_interface()
+        if interface is not None:
+            try:
+                value = float(interface.get_temperature())
+                self.current_temp = value
+                return value
+            except Exception:
+                return self.current_temp
+        return self.current_temp
     
     def get_target_temp(self) -> float:
         """Get target temperature."""
@@ -55,6 +67,7 @@ class ThermalPlateDevice(BaseDevice):
     
     def get_device_status(self) -> Dict[str, Any]:
         """Get complete thermal plate status."""
+        current = self.get_temperature()
         with self.lock:
             return {
                 "device_type": self.get_device_type(),
@@ -62,7 +75,7 @@ class ThermalPlateDevice(BaseDevice):
                 "is_on": self.is_on,
                 "status": self.status_message,
                 "connected": oms_channel.is_connected(),
-                "current_temperature": self.current_temp,
+                "current_temperature": current,
                 "target_temperature": self.target_temp,
                 "temperature_history": self.temperature_history.copy(),
             }

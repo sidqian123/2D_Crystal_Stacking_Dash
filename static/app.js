@@ -1,9 +1,103 @@
 let draggingWidget = null;
 let currDragDropZone = null;
 const WIDGET_SIZE_KEY = "dashboard_widget_sizes";
+const STATUS_COLLAPSE_KEY = "dashboard_status_collapsed";
+const COMMAND_LOG_LIMIT = 200;
+const commandLogEntries = [];
+
+function timestampNow() {
+  const d = new Date();
+  return d.toLocaleTimeString();
+}
+
+function truncateForLog(value, maxLen = 300) {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  if (text.length <= maxLen) {
+    return text;
+  }
+  return `${text.slice(0, maxLen)} ...`;
+}
+
+function appendCommandLog(line) {
+  commandLogEntries.push(`[${timestampNow()}] ${line}`);
+  if (commandLogEntries.length > COMMAND_LOG_LIMIT) {
+    commandLogEntries.shift();
+  }
+  const logPre = document.getElementById("command_log");
+  if (logPre) {
+    logPre.textContent = commandLogEntries.join("\n");
+    logPre.scrollTop = logPre.scrollHeight;
+  }
+}
+
+function clearCommandLog() {
+  commandLogEntries.length = 0;
+  const logPre = document.getElementById("command_log");
+  if (logPre) {
+    logPre.textContent = "No commands yet.";
+  }
+}
+
+async function loggedFetch(path, options = {}, commandLabel = "") {
+  const method = options.method || "GET";
+  const label = commandLabel || `${method} ${path}`;
+  appendCommandLog(`CMD ${label}`);
+  try {
+    const response = await fetch(path, options);
+    appendCommandLog(`RES ${label} -> ${response.status}`);
+    return response;
+  } catch (error) {
+    appendCommandLog(`ERR ${label} -> ${truncateForLog(error?.message || String(error))}`);
+    throw error;
+  }
+}
+
+function getCollapsedStatusMap() {
+  try {
+    const raw = localStorage.getItem(STATUS_COLLAPSE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_err) {
+    return {};
+  }
+}
+
+function saveCollapsedStatusMap(map) {
+  localStorage.setItem(STATUS_COLLAPSE_KEY, JSON.stringify(map));
+}
+
+function applyStatusCollapse(key, collapsed) {
+  const statusBox = document.querySelector(`.status-box[data-status-key="${key}"]`);
+  const toggleBtn = document.querySelector(`.status-toggle[data-status-key="${key}"]`);
+  if (!statusBox || !toggleBtn) {
+    return;
+  }
+  statusBox.classList.toggle("collapsed", collapsed);
+  toggleBtn.textContent = collapsed ? "Expand" : "Collapse";
+}
+
+function initStatusToggles() {
+  const collapsedState = getCollapsedStatusMap();
+  const toggles = Array.from(document.querySelectorAll(".status-toggle"));
+
+  toggles.forEach((btn) => {
+    const key = btn.getAttribute("data-status-key");
+    if (!key) {
+      return;
+    }
+
+    applyStatusCollapse(key, Boolean(collapsedState[key]));
+
+    btn.addEventListener("click", () => {
+      const nextState = !Boolean(collapsedState[key]);
+      collapsedState[key] = nextState;
+      applyStatusCollapse(key, nextState);
+      saveCollapsedStatusMap(collapsedState);
+    });
+  });
+}
 
 async function callApi(path) {
-  const response = await fetch(path);
+  const response = await loggedFetch(path, {}, path);
   await Promise.all([loadStatus(), loadNanopositionerStatus()]);
   return response;
 }
@@ -379,21 +473,21 @@ async function loadStatus() {
 }
 
 async function stageMove(axis, direction, stepMode) {
-  await fetch("/api/nanopositioner/move", {
+  await loggedFetch("/api/nanopositioner/move", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ axis, direction, step_mode: stepMode }),
-  });
+  }, `stageMove ${axis} ${direction} ${stepMode}`);
   await loadNanopositionerStatus();
 }
 
 async function stageHome() {
-  await fetch("/api/nanopositioner/home", { method: "POST" });
+  await loggedFetch("/api/nanopositioner/home", { method: "POST" }, "stageHome");
   await loadNanopositionerStatus();
 }
 
 async function stageStop() {
-  await fetch("/api/nanopositioner/stop", { method: "POST" });
+  await loggedFetch("/api/nanopositioner/stop", { method: "POST" }, "stageStop");
   await loadNanopositionerStatus();
 }
 
@@ -534,11 +628,11 @@ async function setThermalTemperature(temp) {
   }
 
   try {
-    const response = await fetch("/api/thermal/set-temperature", {
+    const response = await loggedFetch("/api/thermal/set-temperature", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target_temperature: temp }),
-    });
+    }, `thermalSetTemperature ${temp}`);
 
     const data = await response.json();
     document.getElementById("thermal_target").textContent = Math.round(temp * 10) / 10;
@@ -557,11 +651,11 @@ async function toggleThermalPower() {
   const newState = !thermalPowerState;
 
   try {
-    const response = await fetch("/api/thermal/power", {
+    const response = await loggedFetch("/api/thermal/power", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled: newState }),
-    });
+    }, `thermalPower ${newState ? "ON" : "OFF"}`);
 
     const data = await response.json();
     thermalPowerState = newState;
@@ -632,11 +726,11 @@ async function toggleVacuumPower() {
   const newState = !vacuumPowerState;
 
   try {
-    const response = await fetch("/api/vacuum/power", {
+    const response = await loggedFetch("/api/vacuum/power", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled: newState }),
-    });
+    }, `vacuumPower ${newState ? "ON" : "OFF"}`);
 
     const data = await response.json();
     vacuumPowerState = newState;
@@ -674,6 +768,7 @@ initDashboardDrag();
 restoreLayoutState();
 initWidgetResize();
 restoreWidgetSizes();
+initStatusToggles();
 initThermalGraph();
 loadStatus();
 loadNanopositionerStatus();
