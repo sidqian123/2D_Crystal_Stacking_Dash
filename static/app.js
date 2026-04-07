@@ -809,6 +809,7 @@ async function toggleThermalPower() {
 
 // Vacuum Pump Control Functions
 let vacuumPowerState = false;
+let rotationCurrentAngle = 0;
 
 async function loadVacuumStatus() {
   try {
@@ -889,6 +890,76 @@ async function toggleVacuumPower() {
   }
 }
 
+// Rotation Plate Control Functions
+function setRotationIndicator(angle) {
+  const indicator = document.getElementById("rotation_indicator");
+  if (!indicator) {
+    return;
+  }
+  indicator.style.transform = `rotate(${Number(angle) || 0}deg)`;
+}
+
+async function loadRotationStatus() {
+  try {
+    const response = await fetch("/api/rotation/status");
+    const data = await response.json();
+
+    const angle = Number(data.current_angle) || 0;
+    rotationCurrentAngle = angle;
+
+    const currentLabel = document.getElementById("rotation_current");
+    if (currentLabel) {
+      currentLabel.textContent = angle.toFixed(1);
+    }
+
+    const targetInput = document.getElementById("rotation_target_input");
+    if (targetInput && document.activeElement !== targetInput) {
+      targetInput.value = angle.toFixed(1);
+    }
+
+    setRotationIndicator(angle);
+
+    const statusEl = document.getElementById("rotation_status");
+    if (statusEl) {
+      statusEl.textContent = JSON.stringify(data, null, 2);
+    }
+  } catch (error) {
+    console.error("Error loading rotation status:", error);
+  }
+}
+
+async function rotateDirection(direction) {
+  const stepInput = document.getElementById("rotation_step_input");
+  const step = Number.parseFloat(stepInput?.value || "5") || 5;
+
+  await loggedFetch("/api/rotation/nudge", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ direction, step_degrees: Math.abs(step) }),
+  }, `rotationNudge ${direction} ${step}`);
+  await loadRotationStatus();
+}
+
+async function setRotationAngle(value) {
+  let angle = value;
+  if (angle === undefined) {
+    const targetInput = document.getElementById("rotation_target_input");
+    angle = Number.parseFloat(targetInput?.value || "");
+  }
+
+  if (!Number.isFinite(angle)) {
+    appendCommandLog("ERR rotationSet -> invalid angle input");
+    return;
+  }
+
+  await loggedFetch("/api/rotation/set", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ angle }),
+  }, `rotationSet ${angle}`);
+  await loadRotationStatus();
+}
+
 initDashboardDrag();
 restoreLayoutState();
 initWidgetResize();
@@ -900,7 +971,9 @@ loadStatus();
 loadNanopositionerStatus();
 loadThermalStatus();
 loadVacuumStatus();
+loadRotationStatus();
 setInterval(loadStatus, 3000);
 setInterval(loadNanopositionerStatus, 3000);
 setInterval(loadThermalStatus, 2000);
 setInterval(loadVacuumStatus, 2000);
+setInterval(loadRotationStatus, 2000);

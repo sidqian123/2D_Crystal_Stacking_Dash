@@ -17,12 +17,14 @@ if load_dotenv is not None:
 
 from app.camera_service import CameraService
 from nanopositioner.router import router as nanopositioner_router
+from rotation_plate.router import router as rotation_router
 from thermal_plate.router import router as thermal_router
 from vacuum.router import router as vacuum_router
 
 app = FastAPI(title="Alignment Microscope")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 app.include_router(nanopositioner_router)
+app.include_router(rotation_router)
 app.include_router(thermal_router)
 app.include_router(vacuum_router)
 

@@ -3,6 +3,7 @@ from devices.base_device import BaseDevice
 from devices.camera import CameraDevice
 from devices.nanopositioner import NanopositionerDevice
 from devices.oms_channel import OpenMicroStageChannel, oms_channel
+from devices.rotation import RotationPlateDevice
 from devices.thermal import ThermalPlateDevice
 from devices.vacuum import VacuumDevice
 
@@ -11,6 +12,7 @@ __all__ = [
     "CameraDevice",
     "NanopositionerDevice",
     "OpenMicroStageChannel",
+    "RotationPlateDevice",
     "ThermalPlateDevice",
     "VacuumDevice",
     "oms_channel",
