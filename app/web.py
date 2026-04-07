@@ -5,12 +5,20 @@ from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+try:
+    from dotenv import load_dotenv
+except Exception:  # pragma: no cover - optional dependency
+    load_dotenv = None
+
 from app.camera_service import CameraService
 from nanopositioner.router import router as nanopositioner_router
 from thermal_plate.router import router as thermal_router
 from vacuum.router import router as vacuum_router
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+if load_dotenv is not None:
+    load_dotenv(BASE_DIR / ".env")
 
 app = FastAPI(title="Alignment Microscope")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")

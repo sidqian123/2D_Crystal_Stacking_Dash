@@ -41,9 +41,11 @@ class CameraService(CameraDevice):
     def __init__(self):
         super().__init__()
         self.picam2 = None
+        self.pylon = None
         self.output = StreamingOutput()
 
         self.sensor_info = DefaultSensorInfo()
+        self.camera_backend = os.getenv("CAMERA_BACKEND", "picamera2").strip().lower()
         self.camera_num = int(os.getenv("CAMERA_NUM", "0"))
 
         self.current_image_controls = {
@@ -51,6 +53,24 @@ class CameraService(CameraDevice):
             "Contrast": 1.0,
             "Saturation": 1.0,
         }
+
+    def _read_stream_config(self) -> tuple[tuple[int, int], float]:
+        stream_size_env = os.getenv("STREAM_SIZE", "1280x720").lower().strip()
+        try:
+            stream_w, stream_h = (int(v) for v in stream_size_env.split("x", 1))
+            stream_size = (stream_w, stream_h)
+        except Exception:
+            logging.warning("Invalid STREAM_SIZE=%s. Falling back to 1280x720.", stream_size_env)
+            stream_size = (1280, 720)
+
+        stream_fps_env = os.getenv("STREAM_FPS", "30").strip()
+        try:
+            stream_fps = float(stream_fps_env)
+        except Exception:
+            logging.warning("Invalid STREAM_FPS=%s. Falling back to 30.", stream_fps_env)
+            stream_fps = 30.0
+
+        return stream_size, stream_fps
 
 
     def _detect_sensor_model(self, cam_num: int) -> str:
@@ -83,6 +103,22 @@ class CameraService(CameraDevice):
             return None
 
     def start(self) -> None:
+        if self.camera_backend == "pypylon":
+            try:
+                from pylon_camera import PylonCameraBackend
+
+                stream_size, stream_fps = self._read_stream_config()
+                self.pylon = PylonCameraBackend(camera_index=self.camera_num)
+                self.pylon.start(self.output, stream_size=stream_size, stream_fps=stream_fps)
+                self.set_camera_available(True, "")
+                return
+            except Exception as exc:
+                error_msg = f"Pypylon unavailable: {exc}"
+                self.set_camera_available(False, error_msg)
+                logging.warning(error_msg)
+                self.pylon = None
+                return
+
         try:
             from picamera2 import Picamera2
             from picamera2.encoders import MJPEGEncoder
@@ -108,20 +144,7 @@ class CameraService(CameraDevice):
             else:
                 self.picam2 = Picamera2(camera_num=self.camera_num, tuning=tuning)
 
-            stream_size_env = os.getenv("STREAM_SIZE", "1280x720").lower().strip()
-            try:
-                stream_w, stream_h = (int(v) for v in stream_size_env.split("x", 1))
-                stream_size = (stream_w, stream_h)
-            except Exception:
-                logging.warning("Invalid STREAM_SIZE=%s. Falling back to 1280x720.", stream_size_env)
-                stream_size = (1280, 720)
-
-            stream_fps_env = os.getenv("STREAM_FPS", "30").strip()
-            try:
-                stream_fps = float(stream_fps_env)
-            except Exception:
-                logging.warning("Invalid STREAM_FPS=%s. Falling back to 30.", stream_fps_env)
-                stream_fps = 30.0
+            stream_size, stream_fps = self._read_stream_config()
 
             config = self.picam2.create_video_configuration(
                 main={"size": stream_size},
@@ -145,34 +168,51 @@ class CameraService(CameraDevice):
             self.picam2 = None
 
     def stop(self) -> None:
+        if self.pylon is not None:
+            self.pylon.stop()
+            self.pylon = None
         if self.picam2 is not None:
             self.picam2.stop_recording()
 
     def _capture_metadata(self) -> Dict[str, Any]:
+        if self.pylon is not None:
+            return self.pylon.capture_metadata()
         if self.picam2 is None:
             return {}
         with self.lock:
             return self.picam2.capture_metadata()
 
     def reset_auto(self) -> None:
+        if self.pylon is not None:
+            self.pylon.reset_auto()
+            return
         if self.picam2 is None:
             return
         with self.lock:
             self.picam2.set_controls({"AeEnable": True, "AwbEnable": True})
 
     def set_awb(self, enabled: bool) -> None:
+        if self.pylon is not None:
+            self.pylon.set_awb(enabled)
+            return
         if self.picam2 is None:
             return
         with self.lock:
             self.picam2.set_controls({"AwbEnable": bool(enabled)})
 
     def set_ae(self, enabled: bool) -> None:
+        if self.pylon is not None:
+            self.pylon.set_ae(enabled)
+            return
         if self.picam2 is None:
             return
         with self.lock:
             self.picam2.set_controls({"AeEnable": bool(enabled)})
 
     def set_gains(self, r: float, b: float) -> None:
+        if self.pylon is not None:
+            self.pylon.set_gains(r, b)
+            return
         if self.picam2 is None:
             return
         with self.lock:
@@ -182,12 +222,18 @@ class CameraService(CameraDevice):
         self.current_image_controls["Brightness"] = float(brightness)
         self.current_image_controls["Contrast"] = float(contrast)
         self.current_image_controls["Saturation"] = float(saturation)
+        if self.pylon is not None:
+            self.pylon.set_image_controls(brightness, contrast, saturation)
+            return
         if self.picam2 is None:
             return
         with self.lock:
             self.picam2.set_controls(self.current_image_controls)
 
     def set_exposure(self, exposure_us: int) -> None:
+        if self.pylon is not None:
+            self.pylon.set_exposure(exposure_us)
+            return
         if self.picam2 is None:
             return
         with self.lock:
@@ -197,12 +243,17 @@ class CameraService(CameraDevice):
         mode = int(mode)
         if mode not in (0, 1):
             mode = 1
+        if self.pylon is not None:
+            self.pylon.set_flicker(mode)
+            return
         if self.picam2 is None:
             return
         with self.lock:
             self.picam2.set_controls({"AeFlickerMode": mode})
 
     def calibrate_camera(self, warmup_seconds: float = 1.5):
+        if self.pylon is not None:
+            return None
         if self.picam2 is None:
             return None
         self.reset_auto()
@@ -218,6 +269,8 @@ class CameraService(CameraDevice):
         return gains
 
     def flat_field_calibrate(self) -> Dict[str, Any]:
+        if self.pylon is not None:
+            return {"ok": False, "error": "Flat-field calibration is not supported for pypylon backend"}
         if self.picam2 is None:
             _, error = self.get_camera_info()
             return {"ok": False, "error": error or "Camera unavailable"}

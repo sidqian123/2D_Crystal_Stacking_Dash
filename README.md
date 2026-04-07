@@ -286,13 +286,35 @@ Hardware (Stubbed - `implemented: false`)
 
 ## Environment Configuration
 
-**Environment Variables:**
-- `HOST` (default: "0.0.0.0")
-- `PORT` (default: 8000)
+This project supports `.env` files via `python-dotenv`.
+
+1. Copy `.env.example` to `.env`
+2. Update values for your setup
+3. Start the app normally
+
+**Common Variables:**
+- `HOST` (default: `0.0.0.0`)
+- `PORT` (default: `8000`)
+- `CAMERA_BACKEND` (`picamera2` or `pypylon`, default: `picamera2`)
+- `CAMERA_NUM` (camera index, default: `0`)
+- `STREAM_SIZE` (default: `1280x720`)
+- `STREAM_FPS` (default: `30`)
+- `CAMERA_SENSOR_MODEL` (optional, Picamera2 backend)
+- `CAMERA_TUNING_FILE` (optional, Picamera2 backend)
+
+**Example `.env`:**
+```env
+HOST=0.0.0.0
+PORT=8000
+CAMERA_BACKEND=pypylon
+CAMERA_NUM=0
+STREAM_SIZE=1280x720
+STREAM_FPS=30
+```
 
 **Launch Command:**
 ```bash
-python3 main.py
+python main.py
 ```
 
 **Server Details:**

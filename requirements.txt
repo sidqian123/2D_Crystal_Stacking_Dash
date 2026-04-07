@@ -1,4 +1,9 @@
 fastapi>=0.115.0
 uvicorn>=0.30.0
+python-dotenv>=1.0.1
+labthings-fastapi
+piexif>=1.1.3
+Pillow>=10.0.0
 picamera2; platform_system == "Linux"
+pypylon>=3.0.1
 git+https://github.com/HonakerM/MicroManipulatorStepper/#subdirectory=software/PythonAPI
