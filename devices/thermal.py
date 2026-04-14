@@ -8,13 +8,17 @@ from devices.oms_channel import oms_channel
 
 class ThermalPlateDevice(BaseDevice):
     """Thermal plate with precise temperature control."""
+
+    HISTORY_WINDOW_SECONDS = 300
+    SAMPLE_PERIOD_SECONDS = 2
+    MAX_HISTORY_POINTS = HISTORY_WINDOW_SECONDS // SAMPLE_PERIOD_SECONDS
     
     def __init__(self):
         """Initialize thermal plate device."""
         super().__init__("Thermal Plate")
         self.current_temp = 25.0  # Current temperature in Celsius
         self.target_temp = 0.0    # Target temperature in Celsius; defaults to 0 while OFF
-        self.temperature_history: List[float] = [25.0]  # History for graphing (last 60 readings)
+        self.temperature_history: List[float] = [25.0]  # Rolling history for line graph
     
     def set_target_temp(self, target: float) -> None:
         """Set target temperature (0-100°C)."""
@@ -52,8 +56,8 @@ class ThermalPlateDevice(BaseDevice):
         with self.lock:
             self.current_temp = temp
             self.temperature_history.append(temp)
-            # Keep last 60 readings
-            if len(self.temperature_history) > 60:
+            # Keep the latest readings for a 5-minute plotting window.
+            if len(self.temperature_history) > self.MAX_HISTORY_POINTS:
                 self.temperature_history.pop(0)
     
     def get_history(self) -> List[float]:
@@ -68,6 +72,7 @@ class ThermalPlateDevice(BaseDevice):
     def get_device_status(self) -> Dict[str, Any]:
         """Get complete thermal plate status."""
         current = self.get_temperature()
+        self.add_reading(current)
         with self.lock:
             return {
                 "device_type": self.get_device_type(),
@@ -78,4 +83,6 @@ class ThermalPlateDevice(BaseDevice):
                 "current_temperature": current,
                 "target_temperature": self.target_temp,
                 "temperature_history": self.temperature_history.copy(),
+                "history_window_seconds": self.HISTORY_WINDOW_SECONDS,
+                "sample_period_seconds": self.SAMPLE_PERIOD_SECONDS,
             }

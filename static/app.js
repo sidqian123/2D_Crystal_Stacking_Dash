@@ -722,6 +722,24 @@ function initThermalGraph() {
       ctx.stroke();
     }
 
+    // Draw X-axis time labels for a 5-minute window.
+    const xLabelY = height - 8;
+    const xStart = padding;
+    const xEnd = width - 4;
+    ctx.fillStyle = "#64748b";
+    ctx.fillText("-5m", xStart, xLabelY);
+    ctx.fillText("-2.5m", Math.round((xStart + xEnd) / 2) - 20, xLabelY);
+    ctx.fillText("now", xEnd - 24, xLabelY);
+
+    // Vertical guide lines for time ticks.
+    ctx.strokeStyle = "#e5e7eb";
+    [xStart, Math.round((xStart + xEnd) / 2), xEnd].forEach((x) => {
+      ctx.beginPath();
+      ctx.moveTo(x, padding);
+      ctx.lineTo(x, height - padding);
+      ctx.stroke();
+    });
+
     // Draw data line
     if (history && history.length > 0) {
       ctx.strokeStyle = "#ef4444";
