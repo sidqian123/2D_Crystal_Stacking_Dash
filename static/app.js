@@ -5,6 +5,7 @@ const STATUS_COLLAPSE_KEY = "dashboard_status_collapsed";
 const COMMAND_LOG_LIMIT = 200;
 const commandLogEntries = [];
 let stageSpeedSetTimer = null;
+let stageCommandInFlight = false;
 const stageStepState = {
   xy: {
     mode: "coarse",
@@ -543,12 +544,31 @@ async function loadStatus() {
 }
 
 async function stageMove(axis, direction, stepMode, stepValue = null) {
-  await loggedFetch("/api/nanopositioner/move", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ axis, direction, step_mode: stepMode, step_value: stepValue }),
-  }, `stageMove ${axis} ${direction} ${stepMode} ${stepValue ?? ""}`.trim());
-  await loadNanopositionerStatus();
+  if (stageCommandInFlight) {
+    appendCommandLog("INFO stageMove ignored: command already in progress");
+    return;
+  }
+  stageCommandInFlight = true;
+  try {
+    const response = await loggedFetch("/api/nanopositioner/move", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ axis, direction, step_mode: stepMode, step_value: stepValue }),
+    }, `stageMove ${axis} ${direction} ${stepMode} ${stepValue ?? ""}`.trim());
+
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (_err) {
+      payload = null;
+    }
+    if (!response.ok || (payload && payload.ok === false)) {
+      appendCommandLog(`ERR stageMove rejected: ${payload?.message || response.status}`);
+    }
+    await loadNanopositionerStatus();
+  } finally {
+    stageCommandInFlight = false;
+  }
 }
 
 function updateStageStepButtons() {
@@ -607,12 +627,31 @@ function scheduleStageSetSpeed() {
 }
 
 async function stageMoveAbsolute(x, y, z) {
-  await loggedFetch("/api/nanopositioner/move-absolute", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ x, y, z }),
-  }, `stageMoveAbsolute ${x} ${y} ${z}`);
-  await loadNanopositionerStatus();
+  if (stageCommandInFlight) {
+    appendCommandLog("INFO stageMoveAbsolute ignored: command already in progress");
+    return;
+  }
+  stageCommandInFlight = true;
+  try {
+    const response = await loggedFetch("/api/nanopositioner/move-absolute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ x, y, z }),
+    }, `stageMoveAbsolute ${x} ${y} ${z}`);
+
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (_err) {
+      payload = null;
+    }
+    if (!response.ok || (payload && payload.ok === false)) {
+      appendCommandLog(`ERR stageMoveAbsolute rejected: ${payload?.message || response.status}`);
+    }
+    await loadNanopositionerStatus();
+  } finally {
+    stageCommandInFlight = false;
+  }
 }
 
 function readNumericInput(id) {

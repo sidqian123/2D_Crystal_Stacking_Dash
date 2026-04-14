@@ -53,6 +53,11 @@ class NanopositionerDevice(BaseDevice):
         """Check whether a hardware reply indicates success."""
         return SerialInterface is not None and reply == SerialInterface.ReplyStatus.OK
 
+    def is_motion_in_progress(self) -> bool:
+        """Return whether a stage motion command is currently executing."""
+        with self.lock:
+            return self.motion_in_progress
+
     def _refresh_position_from_hardware(self) -> tuple[float, float, float] | None:
         """Update cached XYZ position from hardware if available."""
         try:

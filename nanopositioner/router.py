@@ -118,6 +118,13 @@ def nanopositioner_state_info() -> dict:
 @router.post("/move")
 def nanopositioner_move(cmd: MoveCommand) -> dict:
     """Move stage in specified direction."""
+    if nanopositioner_device.is_motion_in_progress():
+        return {
+            "ok": False,
+            "implemented": True,
+            "message": "Stage is busy with another motion command",
+            "position": nanopositioner_device.get_measured_position(),
+        }
     move_result = nanopositioner_device.move(cmd.axis, cmd.direction, cmd.step_mode, cmd.step_value)
     move_ok = move_result.get("status") != "ERROR"
     return {
@@ -132,9 +139,16 @@ def nanopositioner_move(cmd: MoveCommand) -> dict:
 @router.post("/home-axis")
 def nanopositioner_home_axis(cmd: HomeAxisCommand) -> dict:
     """Home a single stage axis using OpenMicroStage axis list semantics."""
+    if nanopositioner_device.is_motion_in_progress():
+        return {
+            "ok": False,
+            "implemented": True,
+            "message": "Stage is busy with another motion command",
+            "position": nanopositioner_device.get_measured_position(),
+        }
     result = nanopositioner_device.home_axis(cmd.axis)
     return {
-        "ok": True,
+        "ok": result.get("status") != "ERROR" if isinstance(result, dict) else True,
         "implemented": True,
         "message": f"Axis {cmd.axis.upper()} home requested",
         "result": result,
@@ -145,6 +159,13 @@ def nanopositioner_home_axis(cmd: HomeAxisCommand) -> dict:
 @router.post("/home")
 def nanopositioner_home() -> dict:
     """Reset stage to home position (0, 0, 0)."""
+    if nanopositioner_device.is_motion_in_progress():
+        return {
+            "ok": False,
+            "implemented": True,
+            "message": "Stage is busy with another motion command",
+            "position": nanopositioner_device.get_measured_position(),
+        }
     nanopositioner_device.home()
     return {
         "ok": True,
@@ -192,6 +213,15 @@ def nanopositioner_set_speed(config: SpeedConfig) -> dict:
 @router.post("/move-absolute")
 def nanopositioner_move_absolute(cmd: MoveAbsoluteCommand) -> dict:
     """Move to an absolute XYZ position."""
+    if nanopositioner_device.is_motion_in_progress():
+        return {
+            "ok": False,
+            "implemented": True,
+            "message": "Stage is busy with another motion command",
+            "position": nanopositioner_device.get_measured_position(),
+            "requested": {"x": cmd.x, "y": cmd.y, "z": cmd.z},
+            "travel_range_mm": [nanopositioner_device.MIN_TRAVEL_MM, nanopositioner_device.MAX_TRAVEL_MM],
+        }
     reply = nanopositioner_device.move_absolute(cmd.x, cmd.y, cmd.z, speed=cmd.speed)
     position = nanopositioner_device.get_measured_position()
     return {
