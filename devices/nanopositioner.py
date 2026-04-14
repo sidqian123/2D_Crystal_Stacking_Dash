@@ -182,9 +182,9 @@ class NanopositionerDevice(BaseDevice):
 
     def read_current_position(self) -> tuple[float, float, float] | tuple[None, None, None]:
         """Get the current position from hardware or the local cache."""
-        interface = self._connected_interface()
-        if interface is not None:
-            return interface.read_current_position()
+        refreshed = self._refresh_position_from_hardware()
+        if refreshed is not None:
+            return refreshed
 
         with self.lock:
             return self.position["x"], self.position["y"], self.position["z"]
@@ -195,8 +195,12 @@ class NanopositionerDevice(BaseDevice):
         if interface is not None:
             reply = interface.set_pose(x, y, z)
             if self._reply_ok(reply):
-                with self.lock:
-                    self.position = {"x": x, "y": y, "z": z}
+                refreshed = self._refresh_position_from_hardware()
+                if refreshed is not None:
+                    rx, ry, rz = refreshed
+                    self.status_message = f"Pose set; current position ({rx:.3f}, {ry:.3f}, {rz:.3f})"
+                else:
+                    self.status_message = "Pose set; awaiting updated position"
             return reply
 
         with self.lock:
@@ -259,9 +263,9 @@ class NanopositionerDevice(BaseDevice):
             feed_rate = self._feed_rate_for_step(abs(resolved_step))
             reply = self.move_to(target["x"], target["y"], target["z"], feed_rate, move_immediately=False, blocking=True, timeout=2)
             status = getattr(reply, "name", str(reply))
-            measured = self.read_current_position()
+            measured = self._refresh_position_from_hardware()
             measured_pos = None
-            if measured[0] is not None and measured[1] is not None and measured[2] is not None:
+            if measured is not None:
                 measured_pos = {"x": float(measured[0]), "y": float(measured[1]), "z": float(measured[2])}
             return {
                 "axis": axis,
@@ -313,6 +317,7 @@ class NanopositionerDevice(BaseDevice):
     
     def get_device_status(self) -> Dict[str, Any]:
         """Get complete nanopositioner status."""
+        self._refresh_position_from_hardware()
         with self.lock:
             connected = oms_channel.is_connected()
             self.connected = connected

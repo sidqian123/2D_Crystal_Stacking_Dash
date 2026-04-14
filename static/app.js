@@ -6,8 +6,14 @@ const COMMAND_LOG_LIMIT = 200;
 const commandLogEntries = [];
 let stageSpeedSetTimer = null;
 const stageStepState = {
-  mode: "fine",
-  label: "1",
+  xy: {
+    mode: "coarse",
+    label: "100",
+  },
+  z: {
+    mode: "fine",
+    label: "1",
+  },
 };
 const pollInFlight = {
   status: false,
@@ -539,22 +545,30 @@ async function stageMove(axis, direction, stepMode, stepValue = null) {
 function updateStageStepButtons() {
   const buttons = Array.from(document.querySelectorAll(".stage-step-btn"));
   buttons.forEach((button) => {
+    const group = button.getAttribute("data-step-group") === "z" ? "z" : "xy";
     const mode = button.getAttribute("data-step-mode");
     const label = button.getAttribute("data-step-label");
-    const selected = mode === stageStepState.mode && label === stageStepState.label;
+    const selected = mode === stageStepState[group].mode && label === stageStepState[group].label;
     button.classList.toggle("stage-step-active", selected);
   });
 }
 
-function stageSelectStep(mode, label) {
-  stageStepState.mode = mode === "coarse" ? "coarse" : "fine";
-  stageStepState.label = String(label || "1");
+function stageSelectStep(groupOrMode, modeOrLabel, maybeLabel) {
+  // Backward compatibility: stageSelectStep(mode, label)
+  const usingLegacyArgs = maybeLabel === undefined;
+  const group = usingLegacyArgs ? "xy" : (groupOrMode === "z" ? "z" : "xy");
+  const modeRaw = usingLegacyArgs ? groupOrMode : modeOrLabel;
+  const labelRaw = usingLegacyArgs ? modeOrLabel : maybeLabel;
+
+  stageStepState[group].mode = modeRaw === "coarse" ? "coarse" : "fine";
+  stageStepState[group].label = String(labelRaw || "1");
   updateStageStepButtons();
 }
 
 function stageNudge(axis, direction) {
-  const stepValue = Number.parseFloat(stageStepState.label);
-  return stageMove(axis, direction, stageStepState.mode, Number.isFinite(stepValue) ? stepValue : null);
+  const group = axis === "z" ? "z" : "xy";
+  const stepValue = Number.parseFloat(stageStepState[group].label);
+  return stageMove(axis, direction, stageStepState[group].mode, Number.isFinite(stepValue) ? stepValue : null);
 }
 
 async function stageSetSpeed() {

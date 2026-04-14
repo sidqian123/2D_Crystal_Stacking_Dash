@@ -101,22 +101,22 @@
                 <button class="stage-dir-btn stage-x-plus" type="button" onclick="stageNudge('x', 'positive')">+X</button>
 
                 <div class="stage-step-rail" role="group" aria-label="XY move step in microns">
-                  <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="1000" onclick="stageSelectStep('coarse', '1000')">1000 um</button>
-                  <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="100" onclick="stageSelectStep('coarse', '100')">100 um</button>
-                  <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="10" onclick="stageSelectStep('coarse', '10')">10 um</button>
-                  <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="1" onclick="stageSelectStep('fine', '1')">1 um</button>
-                  <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="0.1" onclick="stageSelectStep('fine', '0.1')">0.1 um</button>
+                  <button class="stage-step-btn" type="button" data-step-group="xy" data-step-mode="coarse" data-step-label="1000" onclick="stageSelectStep('xy', 'coarse', '1000')">1000 um</button>
+                  <button class="stage-step-btn" type="button" data-step-group="xy" data-step-mode="coarse" data-step-label="100" onclick="stageSelectStep('xy', 'coarse', '100')">100 um</button>
+                  <button class="stage-step-btn" type="button" data-step-group="xy" data-step-mode="coarse" data-step-label="10" onclick="stageSelectStep('xy', 'coarse', '10')">10 um</button>
+                  <button class="stage-step-btn" type="button" data-step-group="xy" data-step-mode="fine" data-step-label="1" onclick="stageSelectStep('xy', 'fine', '1')">1 um</button>
+                  <button class="stage-step-btn" type="button" data-step-group="xy" data-step-mode="fine" data-step-label="0.1" onclick="stageSelectStep('xy', 'fine', '0.1')">0.1 um</button>
                 </div>
               </div>
             </div>
 
             <div class="stage-z-strip" aria-label="Z axis controls">
               <button class="stage-z-btn" type="button" onclick="stageNudge('z', 'positive')">+Z</button>
-              <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="1000" onclick="stageSelectStep('coarse', '1000')">1000 um</button>
-              <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="100" onclick="stageSelectStep('coarse', '100')">100 um</button>
-              <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="10" onclick="stageSelectStep('coarse', '10')">10 um</button>
-              <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="1" onclick="stageSelectStep('fine', '1')">1 um</button>
-              <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="0.1" onclick="stageSelectStep('fine', '0.1')">0.1 um</button>
+              <button class="stage-step-btn" type="button" data-step-group="z" data-step-mode="coarse" data-step-label="1000" onclick="stageSelectStep('z', 'coarse', '1000')">1000 um</button>
+              <button class="stage-step-btn" type="button" data-step-group="z" data-step-mode="coarse" data-step-label="100" onclick="stageSelectStep('z', 'coarse', '100')">100 um</button>
+              <button class="stage-step-btn" type="button" data-step-group="z" data-step-mode="coarse" data-step-label="10" onclick="stageSelectStep('z', 'coarse', '10')">10 um</button>
+              <button class="stage-step-btn" type="button" data-step-group="z" data-step-mode="fine" data-step-label="1" onclick="stageSelectStep('z', 'fine', '1')">1 um</button>
+              <button class="stage-step-btn" type="button" data-step-group="z" data-step-mode="fine" data-step-label="0.1" onclick="stageSelectStep('z', 'fine', '0.1')">0.1 um</button>
               <button class="stage-z-btn stage-z-minus" type="button" onclick="stageNudge('z', 'negative')">-Z</button>
             </div>
           </div>
@@ -346,6 +346,6 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=20260414-3"></script>
+  <script src="/static/app.js?v=20260414-4"></script>
 </body>
 </html>
