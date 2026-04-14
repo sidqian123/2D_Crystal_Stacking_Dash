@@ -17,6 +17,7 @@ class NanopositionerDevice(BaseDevice):
         super().__init__("Nanopositioner Stage")
         self.position = {"x": 0.0, "y": 0.0, "z": 0.0}
         self.connected = False
+        self.motion_in_progress = False
         self.fine_step = 0.1
         self.coarse_step = 1.0
         self.jog_speed = 3.0
@@ -99,15 +100,22 @@ class NanopositionerDevice(BaseDevice):
     def home(self, axis_list: list[int] = None):
         """Home the stage and update the local position cache."""
         if self._connected_interface() is not None:
-            reply = oms_channel.call_interface("home", axis_list, require_connected=True)
-            if self._reply_ok(reply):
-                refreshed = self._refresh_position_from_hardware()
-                if refreshed is not None:
-                    x, y, z = refreshed
-                    self.status_message = f"Home command accepted; current position ({x:.3f}, {y:.3f}, {z:.3f})"
-                else:
-                    self.status_message = "Home command accepted; awaiting updated position"
-            return reply
+            with self.lock:
+                self.motion_in_progress = True
+            try:
+                reply = oms_channel.call_interface("home", axis_list, require_connected=True)
+                if self._reply_ok(reply):
+                    oms_channel.call_interface("wait_for_stop", disable_callbacks=True, require_connected=True)
+                    refreshed = self._refresh_position_from_hardware()
+                    if refreshed is not None:
+                        x, y, z = refreshed
+                        self.status_message = f"Home command accepted; current position ({x:.3f}, {y:.3f}, {z:.3f})"
+                    else:
+                        self.status_message = "Home command accepted; awaiting updated position"
+                return reply
+            finally:
+                with self.lock:
+                    self.motion_in_progress = False
 
         with self.lock:
             self.position = {"x": 0.0, "y": 0.0, "z": 0.0}
@@ -120,15 +128,22 @@ class NanopositionerDevice(BaseDevice):
             return {"status": "ERROR", "message": f"Invalid axis: {axis}"}
 
         if self._connected_interface() is not None:
-            reply = oms_channel.call_interface("home", [axis_index], require_connected=True)
-            if self._reply_ok(reply):
-                refreshed = self._refresh_position_from_hardware()
-                if refreshed is not None:
-                    x, y, z = refreshed
-                    self.status_message = f"Axis {axis.upper()} home accepted; current position ({x:.3f}, {y:.3f}, {z:.3f})"
-                else:
-                    self.status_message = f"Axis {axis.upper()} home accepted; awaiting updated position"
-            return reply
+            with self.lock:
+                self.motion_in_progress = True
+            try:
+                reply = oms_channel.call_interface("home", [axis_index], require_connected=True)
+                if self._reply_ok(reply):
+                    oms_channel.call_interface("wait_for_stop", disable_callbacks=True, require_connected=True)
+                    refreshed = self._refresh_position_from_hardware()
+                    if refreshed is not None:
+                        x, y, z = refreshed
+                        self.status_message = f"Axis {axis.upper()} home accepted; current position ({x:.3f}, {y:.3f}, {z:.3f})"
+                    else:
+                        self.status_message = f"Axis {axis.upper()} home accepted; awaiting updated position"
+                return reply
+            finally:
+                with self.lock:
+                    self.motion_in_progress = False
 
         with self.lock:
             self.position[axis] = 0.0
@@ -143,29 +158,36 @@ class NanopositionerDevice(BaseDevice):
         f: float,
         move_immediately: bool = False,
         blocking: bool = True,
-        timeout: float = 1,
+        timeout: float = 15,
     ):
         """Move the stage using the OpenMicroStage interface when connected."""
         if self._connected_interface() is not None:
-            reply = oms_channel.call_interface(
-                "move_to",
-                x,
-                y,
-                z,
-                f,
-                move_immediately=move_immediately,
-                blocking=blocking,
-                timeout=timeout,
-                require_connected=True,
-            )
-            if self._reply_ok(reply):
-                refreshed = self._refresh_position_from_hardware()
-                if refreshed is not None:
-                    rx, ry, rz = refreshed
-                    self.status_message = f"Move accepted; current position ({rx:.3f}, {ry:.3f}, {rz:.3f})"
-                else:
-                    self.status_message = "Move accepted; awaiting updated position"
-            return reply
+            with self.lock:
+                self.motion_in_progress = True
+            try:
+                reply = oms_channel.call_interface(
+                    "move_to",
+                    x,
+                    y,
+                    z,
+                    f,
+                    move_immediately=move_immediately,
+                    blocking=False,
+                    timeout=timeout,
+                    require_connected=True,
+                )
+                if self._reply_ok(reply):
+                    oms_channel.call_interface("wait_for_stop", disable_callbacks=True, require_connected=True)
+                    refreshed = self._refresh_position_from_hardware()
+                    if refreshed is not None:
+                        rx, ry, rz = refreshed
+                        self.status_message = f"Move complete; current position ({rx:.3f}, {ry:.3f}, {rz:.3f})"
+                    else:
+                        self.status_message = "Move complete; measured position unavailable"
+                return reply
+            finally:
+                with self.lock:
+                    self.motion_in_progress = False
 
         with self.lock:
             self.position = {"x": x, "y": y, "z": z}
@@ -344,7 +366,10 @@ class NanopositionerDevice(BaseDevice):
     
     def get_device_status(self) -> Dict[str, Any]:
         """Get complete nanopositioner status."""
-        self._refresh_position_from_hardware()
+        with self.lock:
+            moving = self.motion_in_progress
+        if not moving:
+            self._refresh_position_from_hardware()
         with self.lock:
             connected = oms_channel.is_connected()
             self.connected = connected
@@ -358,5 +383,6 @@ class NanopositionerDevice(BaseDevice):
                 "fine_step": self.fine_step,
                 "coarse_step": self.coarse_step,
                 "jog_speed": self.jog_speed,
+                "motion_in_progress": self.motion_in_progress,
                 "travel_range_mm": [self.MIN_TRAVEL_MM, self.MAX_TRAVEL_MM],
             }
