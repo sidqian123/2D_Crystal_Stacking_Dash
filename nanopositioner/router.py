@@ -192,11 +192,14 @@ def nanopositioner_set_speed(config: SpeedConfig) -> dict:
 def nanopositioner_move_absolute(cmd: MoveAbsoluteCommand) -> dict:
     """Move to an absolute XYZ position."""
     reply = nanopositioner_device.move_absolute(cmd.x, cmd.y, cmd.z, speed=cmd.speed)
+    position = nanopositioner_device.get_position()
     return {
         "ok": True,
         "implemented": True,
         "message": "Absolute move applied",
         "reply": getattr(reply, "name", str(reply)),
-        "position": nanopositioner_device.get_position(),
+        "position": position,
+        "requested": {"x": cmd.x, "y": cmd.y, "z": cmd.z},
+        "travel_range_mm": [nanopositioner_device.MIN_TRAVEL_MM, nanopositioner_device.MAX_TRAVEL_MM],
     }
 

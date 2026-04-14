@@ -9,6 +9,56 @@ const stageStepState = {
   mode: "fine",
   label: "1",
 };
+const pollInFlight = {
+  status: false,
+  nanopositioner: false,
+  thermal: false,
+  vacuum: false,
+  rotation: false,
+};
+
+async function runDedupedPoll(key, fn) {
+  if (pollInFlight[key]) {
+    return;
+  }
+  pollInFlight[key] = true;
+  try {
+    await fn();
+  } finally {
+    pollInFlight[key] = false;
+  }
+}
+
+function startDashboardPolling() {
+  if (window.__dashboardPollingInitialized) {
+    return;
+  }
+  window.__dashboardPollingInitialized = true;
+
+  const tasks = [
+    { key: "status", fn: loadStatus, intervalMs: 3000 },
+    { key: "nanopositioner", fn: loadNanopositionerStatus, intervalMs: 3000 },
+    { key: "thermal", fn: loadThermalStatus, intervalMs: 2000 },
+    { key: "vacuum", fn: loadVacuumStatus, intervalMs: 2000 },
+    { key: "rotation", fn: loadRotationStatus, intervalMs: 2000 },
+  ];
+
+  tasks.forEach((task) => {
+    runDedupedPoll(task.key, task.fn);
+    setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
+      runDedupedPoll(task.key, task.fn);
+    }, task.intervalMs);
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      tasks.forEach((task) => runDedupedPoll(task.key, task.fn));
+    }
+  });
+}
 
 function timestampNow() {
   const d = new Date();
@@ -567,12 +617,15 @@ function syncInputValue(id, value, decimals = 1) {
   el.value = value.toFixed(decimals);
 }
 
-function updateStagePositionHints(position) {
+function updateStagePositionHints(position, travelRange = null) {
   if (!position || typeof position !== "object") return;
   const x = Number.isFinite(position.x) ? position.x : 0;
   const y = Number.isFinite(position.y) ? position.y : 0;
   const z = Number.isFinite(position.z) ? position.z : 0;
-  const text = `Current position: X ${x.toFixed(3)}, Y ${y.toFixed(3)}, Z ${z.toFixed(3)}`;
+  const rangeText = Array.isArray(travelRange) && travelRange.length === 2
+    ? ` | Range: ${travelRange[0]} to ${travelRange[1]} mm`
+    : "";
+  const text = `Current position (mm): X ${x.toFixed(3)}, Y ${y.toFixed(3)}, Z ${z.toFixed(3)}${rangeText}`;
 
   const speedHint = document.getElementById("stage_position_hint_speed");
   if (speedHint) {
@@ -613,11 +666,12 @@ async function loadNanopositionerStatus() {
   }
 
   const position = data?.position;
+  const travelRange = Array.isArray(data?.travel_range_mm) ? data.travel_range_mm : null;
   if (position && typeof position === "object") {
     syncInputValue("stage_x_input", position.x, 3);
     syncInputValue("stage_y_input", position.y, 3);
     syncInputValue("stage_z_input", position.z, 3);
-    updateStagePositionHints(position);
+    updateStagePositionHints(position, travelRange);
   }
 
   if (typeof data?.jog_speed === "number") {
@@ -797,6 +851,10 @@ async function toggleThermalPower() {
       powerBtn.textContent = "Turn ON";
     }
 
+    if (typeof data.target_temperature === "number") {
+      document.getElementById("thermal_target").textContent = Math.round(data.target_temperature * 10) / 10;
+    }
+
     // Update status
     const statusEl = document.getElementById("thermal_status");
     if (statusEl) {
@@ -967,13 +1025,4 @@ restoreWidgetSizes();
 initStatusToggles();
 initThermalGraph();
 updateStageStepButtons();
-loadStatus();
-loadNanopositionerStatus();
-loadThermalStatus();
-loadVacuumStatus();
-loadRotationStatus();
-setInterval(loadStatus, 3000);
-setInterval(loadNanopositionerStatus, 3000);
-setInterval(loadThermalStatus, 2000);
-setInterval(loadVacuumStatus, 2000);
-setInterval(loadRotationStatus, 2000);
+startDashboardPolling();

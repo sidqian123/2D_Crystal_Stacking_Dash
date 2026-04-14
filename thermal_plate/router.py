@@ -52,10 +52,13 @@ async def set_temperature(request: SetTemperatureRequest):
 async def control_power(request: PowerControlRequest):
     """Turn thermal plate on or off."""
     thermal_device.set_power(request.enabled)
+    if not request.enabled:
+        thermal_device.set_temperature(0.0)
     return {
         "ok": True,
         "implemented": True,
         "message": "Thermal plate power updated",
         "is_on": thermal_device.get_power(),
+        "target_temperature": thermal_device.get_target_temp(),
     }
 

@@ -8,6 +8,9 @@ from devices.oms_channel import SerialInterface, oms_channel
 
 class NanopositionerDevice(BaseDevice):
     """3-axis nanopositioner for precise stage positioning."""
+
+    MIN_TRAVEL_MM = -13.0
+    MAX_TRAVEL_MM = 13.0
     
     def __init__(self):
         """Initialize nanopositioner device."""
@@ -34,6 +37,11 @@ class NanopositionerDevice(BaseDevice):
             return 3.0
         return 1.0
 
+    @classmethod
+    def _clamp_mm(cls, value: float) -> float:
+        """Clamp an axis target to configured travel range in millimeters."""
+        return max(cls.MIN_TRAVEL_MM, min(cls.MAX_TRAVEL_MM, float(value)))
+
     def set_jog_speed(self, speed: float) -> None:
         """Set jog movement speed in mm/s for button and manual moves."""
         with self.lock:
@@ -43,6 +51,21 @@ class NanopositionerDevice(BaseDevice):
     def _reply_ok(self, reply: Any) -> bool:
         """Check whether a hardware reply indicates success."""
         return SerialInterface is not None and reply == SerialInterface.ReplyStatus.OK
+
+    def _refresh_position_from_hardware(self) -> tuple[float, float, float] | None:
+        """Update cached XYZ position from hardware if available."""
+        interface = self._connected_interface()
+        if interface is None:
+            return None
+        try:
+            x, y, z = interface.read_current_position()
+        except Exception:
+            return None
+        if x is None or y is None or z is None:
+            return None
+        with self.lock:
+            self.position = {"x": float(x), "y": float(y), "z": float(z)}
+        return float(x), float(y), float(z)
 
     def _connected_interface(self):
         """Return the OpenMicroStage interface only when serial is connected."""
@@ -79,8 +102,12 @@ class NanopositionerDevice(BaseDevice):
         if interface is not None:
             reply = interface.home(axis_list)
             if self._reply_ok(reply):
-                self.position = {"x": 0.0, "y": 0.0, "z": 0.0}
-                self.status_message = "Homed to origin (0, 0, 0)"
+                refreshed = self._refresh_position_from_hardware()
+                if refreshed is not None:
+                    x, y, z = refreshed
+                    self.status_message = f"Home command accepted; current position ({x:.3f}, {y:.3f}, {z:.3f})"
+                else:
+                    self.status_message = "Home command accepted; awaiting updated position"
             return reply
 
         with self.lock:
@@ -97,9 +124,12 @@ class NanopositionerDevice(BaseDevice):
         if interface is not None:
             reply = interface.home([axis_index])
             if self._reply_ok(reply):
-                with self.lock:
-                    self.position[axis] = 0.0
-                    self.status_message = f"Axis {axis.upper()} homed"
+                refreshed = self._refresh_position_from_hardware()
+                if refreshed is not None:
+                    x, y, z = refreshed
+                    self.status_message = f"Axis {axis.upper()} home accepted; current position ({x:.3f}, {y:.3f}, {z:.3f})"
+                else:
+                    self.status_message = f"Axis {axis.upper()} home accepted; awaiting updated position"
             return reply
 
         with self.lock:
@@ -122,9 +152,12 @@ class NanopositionerDevice(BaseDevice):
         if interface is not None:
             reply = interface.move_to(x, y, z, f, move_immediately=move_immediately, blocking=blocking, timeout=timeout)
             if self._reply_ok(reply):
-                with self.lock:
-                    self.position = {"x": x, "y": y, "z": z}
-                    self.status_message = f"Moved to ({x}, {y}, {z})"
+                refreshed = self._refresh_position_from_hardware()
+                if refreshed is not None:
+                    rx, ry, rz = refreshed
+                    self.status_message = f"Move accepted; current position ({rx:.3f}, {ry:.3f}, {rz:.3f})"
+                else:
+                    self.status_message = "Move accepted; awaiting updated position"
             return reply
 
         with self.lock:
@@ -135,7 +168,10 @@ class NanopositionerDevice(BaseDevice):
     def move_absolute(self, x: float, y: float, z: float, speed: float | None = None):
         """Move to an absolute XYZ position using configured or provided speed."""
         feed_rate = float(speed) if speed is not None else self.jog_speed
-        return self.move_to(x, y, z, f=max(0.1, feed_rate), move_immediately=False, blocking=True, timeout=2)
+        clamped_x = self._clamp_mm(x)
+        clamped_y = self._clamp_mm(y)
+        clamped_z = self._clamp_mm(z)
+        return self.move_to(clamped_x, clamped_y, clamped_z, f=max(0.1, feed_rate), move_immediately=False, blocking=True, timeout=2)
 
     def wait_for_stop(self, disable_callbacks: bool = True):
         """Wait for the stage to stop moving."""
@@ -183,11 +219,20 @@ class NanopositionerDevice(BaseDevice):
                 self.status_message = f"Position updated: {self.position}"
     
     def move(self, axis: str, direction: str, step_mode: str, step_value: float | None = None) -> Dict[str, Any]:
-        """Move stage in specified direction using OpenMicroStage move_to semantics."""
+        """Move stage in specified direction using OpenMicroStage move_to semantics.
+
+        step_value is interpreted as microns from UI jog controls.
+        """
         if axis not in {"x", "y", "z"}:
             return {"status": "ERROR", "message": f"Invalid axis: {axis}"}
 
-        resolved_step = float(step_value) if step_value is not None else (self.fine_step if step_mode == "fine" else self.coarse_step)
+        if step_value is not None:
+            step_um = float(step_value)
+            resolved_step = step_um / 1000.0
+        else:
+            resolved_step = self.fine_step if step_mode == "fine" else self.coarse_step
+            step_um = resolved_step * 1000.0
+
         delta = resolved_step if direction == "positive" else -resolved_step
 
         current_x, current_y, current_z = self.read_current_position()
@@ -201,19 +246,34 @@ class NanopositionerDevice(BaseDevice):
             "z": float(current_z),
         }
         target[axis] += delta
+        unclamped_target = dict(target)
+        target = {
+            "x": self._clamp_mm(target["x"]),
+            "y": self._clamp_mm(target["y"]),
+            "z": self._clamp_mm(target["z"]),
+        }
+        clamped = target != unclamped_target
 
         interface = self._connected_interface()
         if interface is not None:
             feed_rate = self._feed_rate_for_step(abs(resolved_step))
             reply = self.move_to(target["x"], target["y"], target["z"], feed_rate, move_immediately=False, blocking=True, timeout=2)
             status = getattr(reply, "name", str(reply))
+            measured = self.read_current_position()
+            measured_pos = None
+            if measured[0] is not None and measured[1] is not None and measured[2] is not None:
+                measured_pos = {"x": float(measured[0]), "y": float(measured[1]), "z": float(measured[2])}
             return {
                 "axis": axis,
                 "direction": direction,
                 "step_mode": step_mode,
+                "step_um": step_um,
                 "step_value": resolved_step,
                 "delta": delta,
                 "target": target,
+                "measured_position": measured_pos,
+                "clamped": clamped,
+                "travel_range_mm": [self.MIN_TRAVEL_MM, self.MAX_TRAVEL_MM],
                 "feed_rate": feed_rate,
                 "reply": status,
             }
@@ -226,9 +286,12 @@ class NanopositionerDevice(BaseDevice):
             "axis": axis,
             "direction": direction,
             "step_mode": step_mode,
+            "step_um": step_um,
             "step_value": resolved_step,
             "delta": delta,
             "target": target,
+            "clamped": clamped,
+            "travel_range_mm": [self.MIN_TRAVEL_MM, self.MAX_TRAVEL_MM],
             "reply": "SIMULATED",
         }
     
@@ -263,4 +326,5 @@ class NanopositionerDevice(BaseDevice):
                 "fine_step": self.fine_step,
                 "coarse_step": self.coarse_step,
                 "jog_speed": self.jog_speed,
+                "travel_range_mm": [self.MIN_TRAVEL_MM, self.MAX_TRAVEL_MM],
             }

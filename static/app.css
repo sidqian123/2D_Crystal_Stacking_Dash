@@ -426,9 +426,9 @@ pre {
 .stage-step-btn {
   position: relative;
   border-radius: 999px;
-  min-width: 42px;
+  min-width: 56px;
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: 11px;
   background: linear-gradient(180deg, #51565f, #2f333a);
   color: #f8fafc;
   border: 2px solid #f4b4bc;
@@ -467,7 +467,7 @@ pre {
 }
 
 .stage-z-strip .stage-step-btn {
-  width: 52px;
+  width: 60px;
 }
 
 .stage-home-btn:hover,

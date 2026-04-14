@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/app.css?v=20260407-8">
+  <link rel="stylesheet" href="/static/app.css?v=20260414-2">
 </head>
 <body>
   <div class="bg-grid" aria-hidden="true"></div>
@@ -100,20 +100,20 @@
                 <button class="stage-dir-btn stage-x-minus" type="button" onclick="stageNudge('x', 'negative')">-X</button>
                 <button class="stage-dir-btn stage-x-plus" type="button" onclick="stageNudge('x', 'positive')">+X</button>
 
-                <div class="stage-step-rail" role="group" aria-label="XY move scale">
-                  <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="100" onclick="stageSelectStep('coarse', '100')">100</button>
-                  <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="10" onclick="stageSelectStep('coarse', '10')">10</button>
-                  <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="1" onclick="stageSelectStep('fine', '1')">1</button>
-                  <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="0.1" onclick="stageSelectStep('fine', '0.1')">0.1</button>
+                <div class="stage-step-rail" role="group" aria-label="XY move step in microns">
+                  <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="100" onclick="stageSelectStep('coarse', '100')">100 um</button>
+                  <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="10" onclick="stageSelectStep('coarse', '10')">10 um</button>
+                  <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="1" onclick="stageSelectStep('fine', '1')">1 um</button>
+                  <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="0.1" onclick="stageSelectStep('fine', '0.1')">0.1 um</button>
                 </div>
               </div>
             </div>
 
             <div class="stage-z-strip" aria-label="Z axis controls">
               <button class="stage-z-btn" type="button" onclick="stageNudge('z', 'positive')">+Z</button>
-              <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="10" onclick="stageSelectStep('coarse', '10')">10</button>
-              <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="1" onclick="stageSelectStep('fine', '1')">1</button>
-              <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="0.1" onclick="stageSelectStep('fine', '0.1')">0.1</button>
+              <button class="stage-step-btn" type="button" data-step-mode="coarse" data-step-label="10" onclick="stageSelectStep('coarse', '10')">10 um</button>
+              <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="1" onclick="stageSelectStep('fine', '1')">1 um</button>
+              <button class="stage-step-btn" type="button" data-step-mode="fine" data-step-label="0.1" onclick="stageSelectStep('fine', '0.1')">0.1 um</button>
               <button class="stage-z-btn stage-z-minus" type="button" onclick="stageNudge('z', 'negative')">-Z</button>
             </div>
           </div>
@@ -125,15 +125,15 @@
             </div>
 
             <div class="stage-manual-row stage-manual-xyz">
-              <label for="stage_x_input">X</label>
+              <label for="stage_x_input">X (mm)</label>
               <input id="stage_x_input" type="number" step="0.1" value="0.0">
-              <label for="stage_y_input">Y</label>
+              <label for="stage_y_input">Y (mm)</label>
               <input id="stage_y_input" type="number" step="0.1" value="0.0">
-              <label for="stage_z_input">Z</label>
+              <label for="stage_z_input">Z (mm)</label>
               <input id="stage_z_input" type="number" step="0.1" value="0.0">
               <button type="button" onclick="stageMoveAbsoluteFromInputs()">Move To XYZ</button>
             </div>
-            <p class="stage-position-hint" id="stage_position_hint_xyz">Current position: X 0.000, Y 0.000, Z 0.000</p>
+            <p class="stage-position-hint" id="stage_position_hint_xyz">Current position (mm): X 0.000, Y 0.000, Z 0.000 | Range: -13 to 13 mm</p>
           </div>
 
         </div>
@@ -343,6 +343,6 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=20260407-8"></script>
+  <script src="/static/app.js?v=20260414-2"></script>
 </body>
 </html>
