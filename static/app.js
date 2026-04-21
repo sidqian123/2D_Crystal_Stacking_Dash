@@ -173,16 +173,23 @@ function initDashboardDrag() {
   const widgets = Array.from(dashboard.querySelectorAll(".widget"));
 
   widgets.forEach((widget) => {
+    let dragArmed = false;
+
     // Prevent browser-native drag interactions from controls/media inside widgets.
     Array.from(widget.querySelectorAll("button, input, select, textarea, label, canvas, img")).forEach((el) => {
       el.setAttribute("draggable", "false");
     });
 
+    widget.addEventListener("pointerdown", (event) => {
+      dragArmed = event.target instanceof Element && Boolean(event.target.closest(".widget-handle"));
+    });
+
     widget.addEventListener("dragstart", (e) => {
-      if (!e.target || !e.target.closest(".widget-handle")) {
+      if (!dragArmed) {
         e.preventDefault();
         return;
       }
+      dragArmed = false;
       draggingWidget = widget;
       widget.classList.add("dragging");
       e.dataTransfer.effectAllowed = "move";
@@ -190,6 +197,7 @@ function initDashboardDrag() {
     });
 
     widget.addEventListener("dragend", () => {
+      dragArmed = false;
       widget.classList.remove("dragging");
       Array.from(dashboard.querySelectorAll(".drop-target")).forEach((w) => 
         w.classList.remove("drop-target")
